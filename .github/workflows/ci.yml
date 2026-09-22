@@ -428,6 +428,21 @@ jobs:
         run: |
           npm ci
           npx napi build --platform --release --features kernel-watcher,shm-fast-path
+      # `napi build` regenerates index.js and index.d.ts. They are
+      # committed, so a diff here means someone edited them by hand or
+      # bumped the version without rebuilding. The 0.5.1 bump did the
+      # first: it changed the version checks but left the error messages
+      # at 0.5.0. The output does not depend on the platform, so one
+      # runner is enough.
+      - name: Check generated loader is up to date
+        if: runner.os == 'Linux'
+        working-directory: packages/honker-node
+        shell: bash
+        run: |
+          if ! git diff --exit-code -- index.js index.d.ts; then
+            echo "::error::index.js or index.d.ts differs from napi build output. Run 'npx napi build --platform --release' in packages/honker-node and commit the result."
+            exit 1
+          fi
       - name: Test Node ↔ Python stream checkpoint journeys
         shell: bash
         run: |
